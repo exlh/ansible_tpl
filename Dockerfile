@@ -19,11 +19,11 @@ COPY --from=ghcr.io/astral-sh/uv:0.13.1 /uv /uvx /bin/
 
 WORKDIR /root/ansible
 
-COPY ./pyproject.toml ./uv.lock ./entrypoint.sh ./
+COPY ./pyproject.toml ./uv.lock ./entrypoint.sh ./requirements.yml ./
 
-RUN chmod a+x ./entrypoint.sh
-
-RUN uv sync --frozen
+RUN uv run ansible-galaxy collection install -r requirements.yml \
+    && chmod a+x ./entrypoint.sh \
+    && uv sync --frozen
 
 ENTRYPOINT ["/root/ansible/entrypoint.sh"]
 CMD ["uv", "run", "ansible-playbook", "--help"]

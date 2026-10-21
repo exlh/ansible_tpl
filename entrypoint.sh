@@ -37,10 +37,10 @@ elif [ -f /run/secrets/ssh_key_vault ]; then
     export ANSIBLE_PRIVATE_KEY_FILE=/dev/shm/.ssh
 fi
 
-# Install Ansible-collections if requirements.yml available
+# Install additional Ansible-collections if ansible/collections/requirements.yml is present
 if [ -f ansible/collections/requirements.yml ]; then
     echo "📚 Install Ansible-collections..."
-    uv run --directory ansible ansible-galaxy collection install -r collections/requirements.yml
+    uv run ansible-galaxy collection install -r ansible/collections/requirements.yml
 fi
 
 echo "✅ Init finished..."
@@ -111,6 +111,39 @@ case "$COMMAND" in
         exec uv run ansible-playbook "$PLAYBOOK" "$@"
         ;;
         
+    genkey)
+        if [ -z "$ANSIBLE_VAULT_PASSWORD_FILE" ] || [ ! -f "$ANSIBLE_VAULT_PASSWORD_FILE" ]; then
+            echo "❌ Error: no vault key provided" >&2
+            exit 1
+        fi
+
+        TEMP_KEY="/dev/shm/ansible_gen_ssh_key"
+        rm -f "$TEMP_KEY" "$TEMP_KEY.pub" "$TEMP_KEY.vault"
+
+        echo "🔑 Generating SSH key..." >&2
+        ssh-keygen -t ed25519 -f "$TEMP_KEY" -N "" -q "$@" -C "ansible_user"
+        
+        if [ ! -f "$TEMP_KEY" ]; then
+            echo "❌ Error: can not generate SSH key" >&2
+            exit 1
+        fi
+
+        echo "🔒 Encrypting private key with Ansible Vault..." >&2
+        uv run ansible-vault encrypt "$TEMP_KEY" \
+            --output "$TEMP_KEY.vault"
+
+        echo "================================================" >&2
+        echo "✅ Public key (add to authorized_keys):" >&2
+        echo "------------------------------------------------" >&2
+        cat "$TEMP_KEY.pub" >&2
+        echo "" >&2
+        echo "✅ Encrypted private key:" >&2
+        echo "------------------------------------------------" >&2
+        cat "$TEMP_KEY.vault"
+        
+        rm -f "$TEMP_KEY" "$TEMP_KEY.pub" "$TEMP_KEY.vault"
+        ;;
+
     default|*)
         echo "⚙️ Run custom command: $COMMAND $*"
         exec "$COMMAND" "$@"
