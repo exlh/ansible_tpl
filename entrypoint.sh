@@ -28,13 +28,13 @@ if [ -f ./.ssh/ssh_key.vault ]; then
     uv run ansible-vault decrypt ./.ssh/ssh_key.vault \
         --output /dev/shm/.ssh/ssh_key
     chmod 600 /dev/shm/.ssh/ssh_key
-    export ANSIBLE_PRIVATE_KEY_FILE=/dev/shm/.ssh
+    export ANSIBLE_PRIVATE_KEY_FILE=/dev/shm/.ssh/ssh_key
 elif [ -f /run/secrets/ssh_key_vault ]; then
     echo "🔓 Decrypt ssh key from secrets..."
     uv run ansible-vault decrypt /run/secrets/ssh_key_vault \
         --output /dev/shm/.ssh/ssh_key
     chmod 600 /dev/shm/.ssh/ssh_key
-    export ANSIBLE_PRIVATE_KEY_FILE=/dev/shm/.ssh
+    export ANSIBLE_PRIVATE_KEY_FILE=/dev/shm/.ssh/ssh_key
 fi
 
 # Install additional Ansible-collections if ansible/collections/requirements.yml is present
